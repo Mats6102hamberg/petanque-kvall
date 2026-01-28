@@ -5,7 +5,7 @@ import {
   teams,
   teamMembers,
   matches,
-} from "../shared/schema";
+} from "./schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
 

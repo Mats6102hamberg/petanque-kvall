@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, generateToken, getAuthUser } from "./authHelpers";
-import { registerSchema, loginSchema } from "../shared/schema";
+import { registerSchema, loginSchema } from "./schema";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const path = req.url?.split("?")[0] || "";
