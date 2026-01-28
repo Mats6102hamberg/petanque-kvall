@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { storage } from "./_storage";
-import { hashPassword, verifyPassword, generateToken, getAuthUser } from "./_auth";
+import { storage } from "./storage";
+import { hashPassword, verifyPassword, generateToken, getAuthUser } from "./authHelpers";
 import { registerSchema, loginSchema } from "../shared/schema";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

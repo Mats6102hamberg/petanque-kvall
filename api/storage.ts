@@ -6,7 +6,7 @@ import {
   teamMembers,
   matches,
 } from "../shared/schema";
-import { db } from "./_db";
+import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const storage = {
