@@ -68,6 +68,7 @@ export interface Registration {
   phoneNumber: string | null;
   paymentStatus: string;
   registeredAt: string;
+  checkedInAt?: string | null;
   event?: GameEvent;
   user?: { id: string; firstName: string | null; lastName: string | null };
 }
@@ -142,6 +143,11 @@ export const registrations = {
     fetchApi<Registration>("/registrations", { method: "POST", body: JSON.stringify(data) }),
   getMine: () => fetchApi<Registration[]>("/registrations"),
   getByEvent: (eventId: number) => fetchApi<Registration[]>(`/registrations?eventId=${eventId}`),
+  checkIn: (eventId: number) =>
+    fetchApi<{ success: boolean; checkedInAt: string }>("/registrations?action=checkin", {
+      method: "POST",
+      body: JSON.stringify({ eventId }),
+    }),
 };
 
 // Matches

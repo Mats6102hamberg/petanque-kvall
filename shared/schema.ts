@@ -80,6 +80,7 @@ export const registrations = pgTable("registrations", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   paymentStatus: varchar("payment_status", { length: 20 }).notNull().default("pending"),
   registeredAt: timestamp("registered_at").defaultNow(),
+  checkedInAt: timestamp("checked_in_at"),
 });
 
 export type Registration = typeof registrations.$inferSelect;

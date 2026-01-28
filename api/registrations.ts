@@ -43,8 +43,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // POST /api/registrations?action=checkin
+  if (req.method === "POST" && req.query.action === "checkin") {
+    try {
+      const { eventId } = req.body;
+      if (!eventId) return res.status(400).json({ message: "Event ID krävs" });
+
+      const registration = await storage.getUserRegistrationForEvent(authUser.userId, eventId);
+      if (!registration) {
+        return res.status(404).json({ message: "Du är inte anmäld till detta event" });
+      }
+
+      if (registration.checkedInAt) {
+        return res.status(400).json({ message: "Du har redan checkat in" });
+      }
+
+      const updated = await storage.checkInUser(registration.id);
+      return res.json({ success: true, checkedInAt: updated.checkedInAt });
+    } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ message: "Kunde inte checka in" });
+    }
+  }
+
   // POST /api/registrations
-  if (req.method === "POST") {
+  if (req.method === "POST" && !req.query.action) {
     try {
       const { gameEventId, phoneNumber } = req.body;
       if (!gameEventId) return res.status(400).json({ message: "Event ID krävs" });

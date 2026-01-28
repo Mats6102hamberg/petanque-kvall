@@ -6,5 +6,5 @@ dist
 
 boule-kvall/
 socialboule/
-lib/
+/lib/
 schema.prisma

@@ -7,9 +7,12 @@ import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import MyMatches from "@/pages/MyMatches";
 import Statistics from "@/pages/Statistics";
+import LiveScoreboard from "@/pages/LiveScoreboard";
+import CheckIn from "@/pages/CheckIn";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import ManageUsers from "@/pages/admin/ManageUsers";
 import ManageEvents from "@/pages/admin/ManageEvents";
+import EventQRCode from "@/pages/admin/EventQRCode";
 
 function ProtectedRoute({
   children,
@@ -66,6 +69,13 @@ export default function App() {
 
   return (
     <Switch>
+      {/* Public routes (no auth required) */}
+      <Route path="/live/:eventId">
+        <LiveScoreboard />
+      </Route>
+      <Route path="/checkin/:eventId">
+        <CheckIn />
+      </Route>
       <Route path="/login">
         <PublicRoute>
           <Login />
@@ -115,6 +125,13 @@ export default function App() {
         <ProtectedRoute adminOnly>
           <Layout>
             <ManageEvents />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/events/:eventId/qr">
+        <ProtectedRoute adminOnly>
+          <Layout>
+            <EventQRCode />
           </Layout>
         </ProtectedRoute>
       </Route>

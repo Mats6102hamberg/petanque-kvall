@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Users, Shuffle, Calendar, MapPin, Clock } from "lucide-react";
+import { Link } from "wouter";
+import { Plus, Trash2, Users, Shuffle, Calendar, MapPin, Clock, QrCode } from "lucide-react";
 import { admin, registrations } from "@/lib/api";
 
 export default function ManageEvents() {
@@ -156,7 +157,13 @@ export default function ManageEvents() {
                   </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Link href={`/admin/events/${event.id}/qr`}>
+                    <button className="btn btn-secondary flex items-center gap-2">
+                      <QrCode size={18} />
+                      QR & Live
+                    </button>
+                  </Link>
                   {!event.teamsGenerated &&
                     event.registrationCount >= event.minPlayers && (
                       <button

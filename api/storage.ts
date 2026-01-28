@@ -121,6 +121,20 @@ export const storage = {
     return reg;
   },
 
+  async getRegistrationById(id: number) {
+    const [reg] = await db.select().from(registrations).where(eq(registrations.id, id));
+    return reg;
+  },
+
+  async checkInUser(registrationId: number) {
+    const [reg] = await db
+      .update(registrations)
+      .set({ checkedInAt: new Date() })
+      .where(eq(registrations.id, registrationId))
+      .returning();
+    return reg;
+  },
+
   async getRegistrationCount(eventId: number) {
     const result = await db
       .select({ count: sql<number>`count(*)::int` })
