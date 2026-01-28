@@ -1,12 +1,4 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { gameEvents, teams, matches, registrations, teamMembers } from "./schema";
-import { eq, desc, sql as sqlFn } from "drizzle-orm";
-
-// Create db connection directly in this file to avoid import issues
-const sql = neon(process.env.DATABASE_URL || "");
-const db = drizzle(sql);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resource = req.query.resource as string;
@@ -14,6 +6,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = req.query.action as string;
 
   try {
+    // Dynamic import to avoid top-level issues
+    const { neon } = await import("@neondatabase/serverless");
+    const { drizzle } = await import("drizzle-orm/neon-http");
+    const { gameEvents, teams, matches, registrations, teamMembers } = await import("./schema");
+    const { eq, desc, sql: sqlFn } = await import("drizzle-orm");
+
+    const sql = neon(process.env.DATABASE_URL || "");
+    const db = drizzle(sql);
+
     // GET /api/admin?resource=events
     if (req.method === "GET" && resource === "events") {
       const events = await db.select().from(gameEvents).orderBy(desc(gameEvents.eventDate));
@@ -37,8 +38,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // DELETE /api/admin?resource=events&id=X
     if (req.method === "DELETE" && resource === "events" && id) {
       const eventId = parseInt(id);
-
-      // Delete in correct order
       await db.delete(matches).where(eq(matches.gameEventId, eventId));
       const eventTeams = await db.select().from(teams).where(eq(teams.gameEventId, eventId));
       for (const team of eventTeams) {
@@ -47,24 +46,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await db.delete(teams).where(eq(teams.gameEventId, eventId));
       await db.delete(registrations).where(eq(registrations.gameEventId, eventId));
       await db.delete(gameEvents).where(eq(gameEvents.id, eventId));
-
       return res.json({ message: "Event borttaget" });
     }
 
-    // POST /api/admin?resource=events&id=X&action=generate-teams
+    // POST generate-teams
     if (req.method === "POST" && resource === "events" && id && action === "generate-teams") {
       const eventId = parseInt(id);
       const [event] = await db.select().from(gameEvents).where(eq(gameEvents.id, eventId));
-
       if (!event) return res.status(404).json({ message: "Event hittades inte" });
       if (event.teamsGenerated) return res.status(400).json({ message: "Lag har redan genererats" });
 
       const eventRegs = await db.select().from(registrations).where(eq(registrations.gameEventId, eventId));
       if (eventRegs.length < 4) {
-        return res.status(400).json({ message: `Behöver minst 4 spelare, har ${eventRegs.length}` });
+        return res.status(400).json({ message: `Behöver minst 4 spelare` });
       }
 
-      // Generate teams
       const shuffled = [...eventRegs].sort(() => Math.random() - 0.5);
       const teamCount = Math.floor(shuffled.length / 2);
 
@@ -99,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error("Admin API Error:", error);
     return res.status(500).json({
       message: "Ett fel uppstod",
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }
