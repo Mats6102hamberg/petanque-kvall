@@ -4,7 +4,8 @@
   "framework": "vite",
   "functions": {
     "api/**/*.ts": {
-      "runtime": "@vercel/node@3.2.0"
+      "runtime": "@vercel/node@3.2.0",
+      "includeFiles": "../shared/**"
     }
   }
 }
