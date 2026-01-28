@@ -1,22 +1,19 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { storage } from "./storage";
-import { getAuthUser } from "./authHelpers";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const authUser = getAuthUser(req);
-  if (!authUser) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (req.method !== "GET") {
+    return res.status(405).json({ message: "Method not allowed" });
   }
 
   // GET /api/events?type=upcoming
-  if (req.method === "GET" && req.query.type === "upcoming") {
+  if (req.query.type === "upcoming") {
     try {
       const event = await storage.getUpcomingEvent();
       if (!event) return res.json(null);
 
       const registrationCount = await storage.getRegistrationCount(event.id);
-      const userRegistration = await storage.getUserRegistrationForEvent(authUser.userId, event.id);
-      return res.json({ ...event, registrationCount, userRegistered: !!userRegistration });
+      return res.json({ ...event, registrationCount });
     } catch (error) {
       console.error("Error:", error);
       return res.status(500).json({ message: "Kunde inte hämta event" });
@@ -24,25 +21,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // GET /api/events?type=with-matches
-  if (req.method === "GET" && req.query.type === "with-matches") {
+  if (req.query.type === "with-matches") {
     try {
       const events = await storage.getAllEvents();
       const eventsWithDetails = await Promise.all(
         events.map(async (event) => {
           const matches = await storage.getMatchesByEvent(event.id);
-          const userReg = await storage.getUserRegistrationForEvent(authUser.userId, event.id);
-          let userTeamId: number | undefined;
-
-          if (userReg) {
-            const eventTeams = await storage.getTeamsByEvent(event.id);
-            for (const team of eventTeams) {
-              const members = await storage.getTeamMembers(team.id);
-              if (members.some((m) => m.userId === authUser.userId)) {
-                userTeamId = team.id;
-                break;
-              }
-            }
-          }
 
           const matchesWithDetails = await Promise.all(
             matches.map(async (match) => {
@@ -57,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
           );
 
-          return { ...event, matches: matchesWithDetails, userTeamId };
+          return { ...event, matches: matchesWithDetails };
         })
       );
       return res.json(eventsWithDetails);
@@ -67,5 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(405).json({ message: "Method not allowed" });
+  // GET /api/events - list all events
+  try {
+    const events = await storage.getAllEvents();
+    return res.json(events);
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({ message: "Kunde inte hämta events" });
+  }
 }

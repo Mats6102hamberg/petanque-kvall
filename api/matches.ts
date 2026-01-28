@@ -1,13 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { storage } from "./storage";
-import { getAuthUser } from "./authHelpers";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const authUser = getAuthUser(req);
-  if (!authUser) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
   const matchId = req.query.id ? parseInt(req.query.id as string) : null;
 
   // GET /api/matches?id=X

@@ -1,53 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { storage } from "./storage";
-import { getAuthUser } from "./authHelpers";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const authUser = getAuthUser(req);
-  if (!authUser) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const user = await storage.getUser(authUser.userId);
-  if (!user?.isAdmin) {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-
   const resource = req.query.resource as string;
   const id = req.query.id as string;
   const action = req.query.action as string;
-
-  // GET /api/admin?resource=users
-  if (req.method === "GET" && resource === "users") {
-    try {
-      const allUsers = await storage.getAllUsers();
-      return res.json(allUsers.map((u) => ({
-        id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName,
-        isAdmin: u.isAdmin, status: u.status, createdAt: u.createdAt,
-      })));
-    } catch (error) {
-      console.error("Error:", error);
-      return res.status(500).json({ message: "Kunde inte hämta användare" });
-    }
-  }
-
-  // PATCH /api/admin?resource=users&id=X&action=status
-  if (req.method === "PATCH" && resource === "users" && id && action === "status") {
-    try {
-      const { status } = req.body;
-      if (!["pending", "approved", "inactive"].includes(status)) {
-        return res.status(400).json({ message: "Ogiltig status" });
-      }
-      const updatedUser = await storage.updateUserStatus(id, status);
-      return res.json({
-        id: updatedUser.id, email: updatedUser.email, firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName, isAdmin: updatedUser.isAdmin, status: updatedUser.status,
-      });
-    } catch (error) {
-      console.error("Error:", error);
-      return res.status(500).json({ message: "Kunde inte uppdatera status" });
-    }
-  }
 
   // GET /api/admin?resource=events
   if (req.method === "GET" && resource === "events") {
@@ -101,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (event.teamsGenerated) return res.status(400).json({ message: "Lag har redan genererats" });
 
       const regCount = await storage.getRegistrationCount(eventId);
-      if (regCount < event.minPlayers) {
-        return res.status(400).json({ message: `Inte tillräckligt med spelare. Behöver ${event.minPlayers}, har ${regCount}` });
+      if (regCount < 4) {
+        return res.status(400).json({ message: `Behöver minst 4 spelare, har ${regCount}` });
       }
 
       await generateTeams(eventId);
