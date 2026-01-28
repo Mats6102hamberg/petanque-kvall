@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { storage } from "../_storage";
-import { getAuthUser } from "../_auth";
+import { storage } from "./_storage";
+import { getAuthUser } from "./_auth";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") {
@@ -14,11 +14,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const stats = await storage.getUserStats(authUser.userId);
-    const matchHistory = await getMatchHistory(authUser.userId);
-    res.json({ ...stats, matchHistory });
+
+    // If detailed stats requested
+    if (req.query.detailed === "true") {
+      const matchHistory = await getMatchHistory(authUser.userId);
+      return res.json({ ...stats, matchHistory });
+    }
+
+    return res.json(stats);
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ message: "Kunde inte hämta statistik" });
+    return res.status(500).json({ message: "Kunde inte hämta statistik" });
   }
 }
 
@@ -49,18 +55,13 @@ async function getMatchHistory(userId: string) {
       if (match.team1Id !== userTeam.id && match.team2Id !== userTeam.id) continue;
 
       const isTeam1 = match.team1Id === userTeam.id;
-      const userTeamScore = isTeam1 ? match.team1Score : match.team2Score;
-      const opponentScore = isTeam1 ? match.team2Score : match.team1Score;
-      const opponentTeamId = isTeam1 ? match.team2Id : match.team1Id;
-      const opponentTeam = eventTeams.find((t) => t.id === opponentTeamId);
-
       history.push({
         id: match.id,
         eventDate: event.eventDate,
-        opponentTeam: opponentTeam?.teamName || "Okänt",
-        userTeamScore: userTeamScore || 0,
-        opponentScore: opponentScore || 0,
-        won: (userTeamScore || 0) > (opponentScore || 0),
+        opponentTeam: eventTeams.find((t) => t.id === (isTeam1 ? match.team2Id : match.team1Id))?.teamName || "Okänt",
+        userTeamScore: isTeam1 ? match.team1Score : match.team2Score,
+        opponentScore: isTeam1 ? match.team2Score : match.team1Score,
+        won: (isTeam1 ? match.team1Score : match.team2Score)! > (isTeam1 ? match.team2Score : match.team1Score)!,
         roundNumber: match.roundNumber,
       });
     }

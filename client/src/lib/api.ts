@@ -12,10 +12,7 @@ export function clearToken(): void {
   localStorage.removeItem("token");
 }
 
-async function fetchApi<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
 
   const headers: HeadersInit = {
@@ -24,24 +21,18 @@ async function fetchApi<T>(
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Ett fel uppstod" }));
     throw new Error(error.message || "Ett fel uppstod");
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
-// Auth
+// Types
 export interface User {
   id: string;
   email: string;
@@ -56,21 +47,6 @@ export interface AuthResponse {
   token: string;
 }
 
-export const auth = {
-  register: (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-  }) => fetchApi<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
-
-  login: (data: { email: string; password: string }) =>
-    fetchApi<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
-
-  getUser: () => fetchApi<User>("/auth/user"),
-};
-
-// Events
 export interface GameEvent {
   id: number;
   eventDate: string;
@@ -85,21 +61,6 @@ export interface GameEvent {
   userRegistered?: boolean;
 }
 
-export const events = {
-  getUpcoming: () => fetchApi<GameEvent | null>("/events/upcoming"),
-
-  getWithMatches: () =>
-    fetchApi<
-      Array<
-        GameEvent & {
-          matches: Match[];
-          userTeamId?: number;
-        }
-      >
-    >("/events/with-matches"),
-};
-
-// Registrations
 export interface Registration {
   id: number;
   gameEventId: number;
@@ -111,26 +72,11 @@ export interface Registration {
   user?: { id: string; firstName: string | null; lastName: string | null };
 }
 
-export const registrations = {
-  create: (data: { gameEventId: number; phoneNumber?: string }) =>
-    fetchApi<Registration>("/registrations", { method: "POST", body: JSON.stringify(data) }),
-
-  getMine: () => fetchApi<Registration[]>("/registrations"),
-
-  getByEvent: (eventId: number) =>
-    fetchApi<Registration[]>(`/registrations/${eventId}`),
-};
-
-// Matches
 export interface TeamMember {
   id: number;
   teamId: number;
   userId: string;
-  user: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-  };
+  user: { id: string; firstName: string | null; lastName: string | null };
 }
 
 export interface Team {
@@ -154,17 +100,6 @@ export interface Match {
   team2?: Team;
 }
 
-export const matches = {
-  getById: (id: number) => fetchApi<Match>(`/matches/${id}`),
-
-  updateResult: (id: number, team1Score: number, team2Score: number) =>
-    fetchApi<Match>(`/matches/${id}/result`, {
-      method: "PATCH",
-      body: JSON.stringify({ team1Score, team2Score }),
-    }),
-};
-
-// Statistics
 export interface UserStats {
   gamesPlayed: number;
   wins: number;
@@ -172,7 +107,6 @@ export interface UserStats {
   winPercentage: number;
   totalPointsScored: number;
   totalPointsConceded: number;
-  currentRanking: number;
 }
 
 export interface MatchHistory {
@@ -185,34 +119,53 @@ export interface MatchHistory {
   roundNumber: number;
 }
 
-export const stats = {
-  getUser: () => fetchApi<UserStats>("/stats/user"),
+// Auth
+export const auth = {
+  register: (data: { email: string; password: string; firstName: string; lastName: string }) =>
+    fetchApi<AuthResponse>("/auth?action=register", { method: "POST", body: JSON.stringify(data) }),
 
-  getDetailed: () =>
-    fetchApi<UserStats & { matchHistory: MatchHistory[] }>("/stats/detailed"),
+  login: (data: { email: string; password: string }) =>
+    fetchApi<AuthResponse>("/auth?action=login", { method: "POST", body: JSON.stringify(data) }),
+
+  getUser: () => fetchApi<User>("/auth?action=user"),
+};
+
+// Events
+export const events = {
+  getUpcoming: () => fetchApi<GameEvent | null>("/events?type=upcoming"),
+  getWithMatches: () => fetchApi<Array<GameEvent & { matches: Match[]; userTeamId?: number }>>("/events?type=with-matches"),
+};
+
+// Registrations
+export const registrations = {
+  create: (data: { gameEventId: number; phoneNumber?: string }) =>
+    fetchApi<Registration>("/registrations", { method: "POST", body: JSON.stringify(data) }),
+  getMine: () => fetchApi<Registration[]>("/registrations"),
+  getByEvent: (eventId: number) => fetchApi<Registration[]>(`/registrations?eventId=${eventId}`),
+};
+
+// Matches
+export const matches = {
+  getById: (id: number) => fetchApi<Match>(`/matches?id=${id}`),
+  updateResult: (id: number, team1Score: number, team2Score: number) =>
+    fetchApi<Match>(`/matches?id=${id}`, { method: "PATCH", body: JSON.stringify({ team1Score, team2Score }) }),
+};
+
+// Stats
+export const stats = {
+  getUser: () => fetchApi<UserStats>("/stats"),
+  getDetailed: () => fetchApi<UserStats & { matchHistory: MatchHistory[] }>("/stats?detailed=true"),
 };
 
 // Admin
 export const admin = {
-  getUsers: () => fetchApi<User[]>("/admin/users"),
-
+  getUsers: () => fetchApi<User[]>("/admin?resource=users"),
   updateUserStatus: (userId: string, status: string) =>
-    fetchApi<User>(`/admin/users/${userId}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
-    }),
-
-  getEvents: () =>
-    fetchApi<Array<GameEvent & { registrationCount: number; matchCount: number }>>(
-      "/admin/events"
-    ),
-
+    fetchApi<User>(`/admin?resource=users&id=${userId}&action=status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  getEvents: () => fetchApi<Array<GameEvent & { registrationCount: number; matchCount: number }>>("/admin?resource=events"),
   createEvent: (data: Partial<GameEvent>) =>
-    fetchApi<GameEvent>("/admin/events", { method: "POST", body: JSON.stringify(data) }),
-
-  deleteEvent: (id: number) =>
-    fetchApi<void>(`/admin/events/${id}`, { method: "DELETE" }),
-
+    fetchApi<GameEvent>("/admin?resource=events", { method: "POST", body: JSON.stringify(data) }),
+  deleteEvent: (id: number) => fetchApi<void>(`/admin?resource=events&id=${id}`, { method: "DELETE" }),
   generateTeams: (eventId: number) =>
-    fetchApi<void>(`/admin/events/${eventId}/generate-teams`, { method: "POST" }),
+    fetchApi<void>(`/admin?resource=events&id=${eventId}&action=generate-teams`, { method: "POST" }),
 };
